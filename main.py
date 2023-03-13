@@ -24,7 +24,7 @@ class OpenAIConnector(object):
     @classmethod
     def chat_completion(cls, context, model='gpt-3.5-turbo'):
         url = 'https://api.openai.com/v1/chat/completions'
-        resp = requests.post(url, data={'model': model, 'messages': context}, headers=cls.HEADERS)
+        resp = requests.post(url, json={'model': model, 'messages': context}, headers=cls.HEADERS)
         if not resp.ok:
             logging.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
         return resp
