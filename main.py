@@ -58,12 +58,12 @@ async def send_message(message: types.Message, state: FSMContext):
     # Go to chat gpt
     answer = ''
     async with state.proxy() as d:
-        if isinstance(d['context'], list):
+        if 'context' in d:
             d['context'].append({'role': 'user', 'content': message.text})
-            openai_answer = OpenAIConnector.chat_completion(d['context'])
-            d['context'] = extract_context(openai_answer.json())
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
+        openai_answer = OpenAIConnector.chat_completion(d['context'])
+        d['context'] = extract_context(openai_answer.json())
         answer = d['context'][-1]
 
     await message.answer(answer)
