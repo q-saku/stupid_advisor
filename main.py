@@ -62,18 +62,19 @@ async def send_message(message: types.Message, state: FSMContext):
             d['context'].append({'role': 'user', 'content': message.text})
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
+        print(d['context'])
         openai_answer = OpenAIConnector.chat_completion(d['context'])
         d['context'].append(extract_context(openai_answer.json()))
         answer = d['context'][-1]
 
-    await message.answer(answer)
+    await message.answer(answer.get('content'))
 
 
 def extract_context(response):
     result = []
     for choice in response['choices']:
         result.append(choice['message'])
-    logging.info(f'Whole message context: {result}')
+    print(f'Whole message context: {result}')
     return result
 
 
