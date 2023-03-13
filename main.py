@@ -49,32 +49,32 @@ async def gpt_dialog(message: types.Message):
 async def gpt_dialog(message: types.Message, state: FSMContext):
     await message.answer("Контекст беседы был сброшен. Для нового диалога жми /gpt")
     d = await state.get_data()
-    print(d)
     await state.finish()
 
 
 @dp.message_handler(state=DialogStates.started)
 async def send_message(message: types.Message, state: FSMContext):
-    # Go to chat gpt
-    answer = ''
+    """
+    Main handle to ChatGPT conversations.
+    """
     async with state.proxy() as d:
         if 'context' in d:
             d['context'].append({'role': 'user', 'content': message.text})
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
-        print(d['context'])
         openai_answer = OpenAIConnector.chat_completion(d['context'])
-        d['context'].append(extract_context(openai_answer.json()))
-        answer = d['context'][-1]
-
-    await message.answer(answer.get('content'))
+        if openai_answer.ok:
+            d['context'].extend(openai_answer.json()['choices'][0])
+            answer = d['context'][-1].get('content')
+        else:
+            answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
+    await message.answer(answer, parse_mode="MarkdownV2")
 
 
 def extract_context(response):
     result = []
     for choice in response['choices']:
         result.append(choice['message'])
-    print(f'Whole message context: {result}')
     return result
 
 
