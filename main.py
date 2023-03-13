@@ -26,7 +26,7 @@ class OpenAIConnector(object):
         url = 'https://api.openai.com/v1/chat/completions'
         resp = requests.post(url, data={'model': model, 'messages': context}, headers=cls.HEADERS)
         if not resp.ok:
-            logging.error(f'Something went wrong: {resp.reason}')
+            logging.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
         return resp
 
 
@@ -63,7 +63,7 @@ async def send_message(message: types.Message, state: FSMContext):
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
         openai_answer = OpenAIConnector.chat_completion(d['context'])
-        d['context'] = extract_context(openai_answer.json())
+        d['context'].append(extract_context(openai_answer.json()))
         answer = d['context'][-1]
 
     await message.answer(answer)
