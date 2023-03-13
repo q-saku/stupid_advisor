@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  cw_helper:
+    build:
+      context: .
+    command: python main.py
+    environment:
+      - BOT_API_TOKEN=${BOT_API_TOKEN}
+      - OPENAI_API_TOKEN=${OPENAI_API_TOKEN}
+    restart: always
+    volumes:
+      - .:/src
