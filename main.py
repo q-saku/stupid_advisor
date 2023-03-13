@@ -1,12 +1,14 @@
 import os
 import logging
 import requests
-import markdown
 
+from logging.config import dictConfig
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
+
+logger = logging.getLogger(__name__)
 
 BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
 
@@ -27,7 +29,7 @@ class OpenAIConnector(object):
         url = 'https://api.openai.com/v1/chat/completions'
         resp = requests.post(url, json={'model': model, 'messages': context}, headers=cls.HEADERS)
         if not resp.ok:
-            logging.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
+            logger.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
         return resp
 
 
@@ -69,6 +71,7 @@ async def send_message(message: types.Message, state: FSMContext):
             answer = d['context'][-1].get('content')
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
+        logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
     await message.answer(answer)
 
 
@@ -84,5 +87,41 @@ def extract_context(response):
     return result
 
 
+def prepare_logging(filename):
+    logging.config.dictConfig({
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "default": {
+                "format": "%(asctime)s:%(name)s:%(process)d:%(lineno)d " "%(levelname)s %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S"
+            },
+        },
+        "handlers": {
+            "logfile": {
+                "formatter": "default",
+                "level": "INFO",
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": filename,
+                "backupCount": 2,
+            },
+            "output": {
+                "formatter": "default",
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+            },
+        },
+        "root": {
+            "level": "INFO",
+            "handlers": [
+                "logfile",
+                "output"
+            ]
+        },
+    })
+
+
 if __name__ == '__main__':
+    prepare_logging('stupid_advisor.log')
     executor.start_polling(dp, skip_updates=True)
