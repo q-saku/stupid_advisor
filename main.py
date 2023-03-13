@@ -71,6 +71,11 @@ async def send_message(message: types.Message, state: FSMContext):
     await message.answer(answer)
 
 
+@dp.message_handler(state=None)
+async def unknown_message(message: types.Message):
+    await message.answer("Прости, я кажется потерял контекст нашей беседы. Возможно тебе придется начать заново, опять. Жми /gpt")
+
+
 def extract_context(response):
     result = []
     for choice in response['choices']:
