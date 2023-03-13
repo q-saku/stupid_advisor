@@ -69,7 +69,7 @@ async def send_message(message: types.Message, state: FSMContext):
             answer = d['context'][-1].get('content')
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
-    await message.answer(markdown.markdown(answer))
+    await message.answer(answer)
 
 
 @dp.message_handler(state=None)
