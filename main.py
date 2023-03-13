@@ -18,7 +18,7 @@ class OpenAIConnector(object):
     OPENAI_API_TOKEN = os.getenv('OPENAI_API_TOKEN')
     HEADERS = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {API_TOKEN}'
+        'Authorization': f'Bearer {OPENAI_API_TOKEN}'
     }
 
     @classmethod
