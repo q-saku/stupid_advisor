@@ -7,15 +7,15 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
 
-API_TOKEN = os.getenv('SA_BOT_API_TOKEN')
+BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
 
 storage = MemoryStorage()
-bot = Bot(token=API_TOKEN)
+bot = Bot(token=BOT_API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
 
 class OpenAIConnector(object):
-    API_TOKEN = os.getenv('OPENAI_API_TOKEN')
+    OPENAI_API_TOKEN = os.getenv('OPENAI_API_TOKEN')
     HEADERS = {
         'Content-Type': 'application/json',
         'Authorization': f'Bearer {API_TOKEN}'
@@ -36,7 +36,7 @@ class DialogStates(StatesGroup):
 
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
-    await message.reply("Это не учения. Здесь тебя ждет интерфейс к великой и ужасной ChatGPT. Жми /gpt Для старта")
+    await message.reply("Это не учения. Здесь тебя ждет интерфейс к великой и ужасной ChatGPT. Жми /gpt Для старта\n Дисклеймер: Меня постоянно поднимают и роняют (поэтому я такой умный). Поэтому если долго молчу, нужно написать мне команду /gpt для нового диалога. Такова селяви.")
 
 
 @dp.message_handler(commands=['gpt'])
@@ -64,11 +64,11 @@ async def send_message(message: types.Message, state: FSMContext):
             d['context'] = [{'role': 'user', 'content': message.text}]
         openai_answer = OpenAIConnector.chat_completion(d['context'])
         if openai_answer.ok:
-            d['context'].extend(openai_answer.json()['choices'][0]['message'])
+            d['context'].extend(extract_context(openai_answer.json()))
             answer = d['context'][-1].get('content')
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
-    await message.answer(answer, parse_mode="MarkdownV2")
+    await message.answer(answer)
 
 
 def extract_context(response):
