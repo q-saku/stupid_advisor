@@ -64,7 +64,7 @@ async def send_message(message: types.Message, state: FSMContext):
             d['context'] = [{'role': 'user', 'content': message.text}]
         openai_answer = OpenAIConnector.chat_completion(d['context'])
         if openai_answer.ok:
-            d['context'].extend(openai_answer.json()['choices'][0])
+            d['context'].extend(openai_answer.json()['choices'][0]['message'])
             answer = d['context'][-1].get('content')
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
