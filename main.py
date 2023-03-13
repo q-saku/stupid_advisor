@@ -1,6 +1,7 @@
 import os
 import logging
 import requests
+import markdown
 
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
@@ -10,7 +11,7 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
 
 storage = MemoryStorage()
-bot = Bot(token=BOT_API_TOKEN)
+bot = Bot(token=BOT_API_TOKEN, parse_mode="HTML")
 dp = Dispatcher(bot, storage=storage)
 
 
@@ -68,7 +69,7 @@ async def send_message(message: types.Message, state: FSMContext):
             answer = d['context'][-1].get('content')
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
-    await message.answer(answer)
+    await message.answer(markdown.markdown(answer))
 
 
 @dp.message_handler(state=None)
