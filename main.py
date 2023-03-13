@@ -11,7 +11,7 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
 
 storage = MemoryStorage()
-bot = Bot(token=BOT_API_TOKEN, parse_mode="HTML")
+bot = Bot(token=BOT_API_TOKEN)
 dp = Dispatcher(bot, storage=storage)
 
 
