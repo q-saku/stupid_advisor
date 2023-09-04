@@ -12,6 +12,7 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 logger = logging.getLogger(__name__)
 
 BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
+AVAILABLE_MODELS = ['gpt-3.5-turbo', 'gpt-4']
 
 storage = MemoryStorage()
 bot = Bot(token=BOT_API_TOKEN)
@@ -49,6 +50,18 @@ async def gpt_dialog(message: types.Message):
     await message.answer("Итак. О чем же ты хотел меня спросить?")
 
 
+@dp.message_handler(commands=['set_model'])
+async def set_model(message: types.Message):
+    keyboard = types.inline_keyboard.InlineKeyboardMarkup(
+        row_width=1,
+    )
+    for el in AVAILABLE_MODELS:
+        keyboard.add(
+            types.inline_keyboard.InlineKeyboardButton(text=el, callback_data='set_' + el)
+        )
+    await message.answer("Выбери модель для работы", reply_markup=keyboard)
+
+
 @dp.message_handler(commands=['clear'], state=DialogStates.started)
 async def gpt_dialog(message: types.Message, state: FSMContext):
     await message.answer("Контекст беседы был сброшен. Для нового диалога жми /gpt")
@@ -62,18 +75,19 @@ async def send_message(message: types.Message, state: FSMContext):
     Main handle to ChatGPT conversations.
     """
     async with state.proxy() as d:
+        answer_message = await message.answer('Твой запрос отправлен, напрягаю извилины..')
         if 'context' in d:
             d['context'].append({'role': 'user', 'content': message.text})
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
-        openai_answer = OpenAIConnector.chat_completion(d['context'])
+        openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
         if openai_answer.ok:
             d['context'].extend(extract_context(openai_answer.json()))
             answer = d['context'][-1].get('content')
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
         logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
-    await message.answer(md_to_html(answer), parse_mode=types.ParseMode.HTML)
+    await answer_message.edit_text(md_to_html(answer), parse_mode=types.ParseMode.HTML)
 
 
 @dp.message_handler(state=None)
@@ -81,6 +95,15 @@ async def unknown_message(message: types.Message, state: FSMContext):
     await DialogStates.started.set()
     await message.answer('Прости, я кажется потерял контекст нашей беседы. Придется начать все заново. Сейчас поищу ответ на твой запрос.')
     await send_message(message, state)
+
+
+@dp.callback_query_handler()
+async def callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
+    args = callback_query.data.split("_", 1)
+    if 'set' in args[0]:
+        async with state.proxy() as d:
+            d['model'] = args[1]
+            callback_query.answer(f'Выставлена модель {args[1]}')
 
 
 def extract_context(response):
