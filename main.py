@@ -1,9 +1,10 @@
 import os
+import re
 import logging
 import requests
 
 from logging.config import dictConfig
-from aiogram import Bot, Dispatcher, executor, types
+from aiogram import Bot, Dispatcher, executor, types, utils
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
@@ -72,13 +73,14 @@ async def send_message(message: types.Message, state: FSMContext):
         else:
             answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
         logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
-    await message.answer(answer)
+    await message.answer(md_to_html(answer), parse_mode=types.ParseMode.HTML)
 
 
 @dp.message_handler(state=None)
 async def unknown_message(message: types.Message):
     await DialogStates.started.set()
-    await message.answer('Прости, я кажется потерял контекст нашей беседы. Придется начать все заново, опять. Итак, каков же твой вопрос?')
+    await message.answer('Прости, я кажется потерял контекст нашей беседы. Придется начать все заново. Сейчас поищу ответ на твой запрос.')
+    await send_message(message)
 
 
 def extract_context(response):
@@ -86,6 +88,18 @@ def extract_context(response):
     for choice in response['choices']:
         result.append(choice['message'])
     return result
+
+
+def md_to_html(text: str) -> str:
+    # Format the most popular tags from source <pre> and <code> if message was cutted - end with ```
+    text = utils.markdown.quote_html(text)
+    while True:
+        text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
+        text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
+        if "```" not in text:
+            break
+        text = text + "```"
+    return text
 
 
 def prepare_logging(filename):
