@@ -39,18 +39,18 @@ class DialogStates(StatesGroup):
     started = State()
 
 
-@dp.message_handler(commands=['start'])
+@dp.message_handler(commands=['start'], state='*')
 async def start(message: types.Message):
     await message.reply("Это не учения. Здесь тебя ждет интерфейс к великой и ужасной ChatGPT. Жми /gpt Для старта\nДисклеймер: Меня постоянно поднимают и роняют (поэтому я такой умный). Поэтому если долго молчу, нужно написать мне команду /gpt для нового диалога. Такова селяви.")
 
 
-@dp.message_handler(commands=['gpt'])
+@dp.message_handler(commands=['gpt'], state='*')
 async def gpt_dialog(message: types.Message):
     await DialogStates.started.set()
     await message.answer("Итак. О чем же ты хотел меня спросить?")
 
 
-@dp.message_handler(commands=['set_model'])
+@dp.message_handler(commands=['set_model'], state='*')
 async def set_model(message: types.Message):
     keyboard = types.inline_keyboard.InlineKeyboardMarkup(
         row_width=1,
@@ -59,7 +59,7 @@ async def set_model(message: types.Message):
         keyboard.add(
             types.inline_keyboard.InlineKeyboardButton(text=el, callback_data='set_' + el)
         )
-    await message.answer("Выбери модель для работы", reply_markup=keyboard)
+    await message.answer('Выбери модель для работы', reply_markup=keyboard)
 
 
 @dp.message_handler(commands=['clear'], state=DialogStates.started)
