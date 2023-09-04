@@ -99,15 +99,11 @@ async def unknown_message(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(state='*')
 async def callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
-    logger.info(callback_query)
     args = callback_query.data.split("_", 1)
-    logger.info(args)
     if args[0] == 'set':
-        logger.info(state)
         async with state.proxy() as d:
-            logger.warning('HERE I AM')
             d['model'] = args[1]
-        callback_query.answer(f'Выставлена модель {args[1]}')
+        await callback_query.answer(f'Выставлена модель {args[1]}')
 
 
 def extract_context(response):
