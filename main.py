@@ -72,7 +72,7 @@ async def set_model(message: types.Message, state: FSMContext):
         row_width=1,
     )
     for el in AVAILABLE_MODELS:
-        cur_model = get_current_model(state)
+        cur_model = await get_current_model(state)
         if cur_model == el:
             button_text = el + '☑️'
         else:
@@ -137,8 +137,8 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
         await callback_query.answer(f'Выставлена модель {args[1]}')
 
 
-def get_current_model(state: FSMContext):
-    with state.proxy() as d:
+async def get_current_model(state: FSMContext):
+    async with state.proxy() as d:
         model = d.get('model', AVAILABLE_MODELS[0])
     return model
 
