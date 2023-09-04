@@ -102,10 +102,10 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
     logger.info(callback_query)
     args = callback_query.data.split("_", 1)
     logger.info(args)
-    if 'set' in args[0]:
+    if args[0] == 'set':
         async with state.proxy() as d:
             d['model'] = args[1]
-            callback_query.answer(f'Выставлена модель {args[1]}')
+        callback_query.answer(f'Выставлена модель {args[1]}')
 
 
 def extract_context(response):
