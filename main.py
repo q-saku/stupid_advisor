@@ -29,7 +29,9 @@ class OpenAIConnector(object):
     @classmethod
     def chat_completion(cls, context, model='gpt-3.5-turbo'):
         url = 'https://api.openai.com/v1/chat/completions'
-        resp = requests.post(url, json={'model': model, 'messages': context}, headers=cls.HEADERS)
+        request_data = {'model': model, 'messages': context}
+        resp = requests.post(url, json=request_data, headers=cls.HEADERS)
+        logger.info(f'REQUEST {url} with DATA {request_data}')
         if not resp.ok:
             logger.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
         return resp
@@ -41,6 +43,11 @@ class DialogStates(StatesGroup):
 
 @dp.message_handler(commands=['start'], state='*')
 async def start(message: types.Message):
+    await message.reply("Это не учения. Здесь тебя ждет интерфейс к великой и ужасной ChatGPT. Жми /gpt Для старта\nДисклеймер: Меня постоянно поднимают и роняют (поэтому я такой умный). Поэтому если долго молчу, нужно написать мне команду /gpt для нового диалога. Такова селяви.")
+
+
+@dp.message_handler(commands=['help'], state='*')
+async def help(message: types.Message):
     await message.reply("Это не учения. Здесь тебя ждет интерфейс к великой и ужасной ChatGPT. Жми /gpt Для старта\nДисклеймер: Меня постоянно поднимают и роняют (поэтому я такой умный). Поэтому если долго молчу, нужно написать мне команду /gpt для нового диалога. Такова селяви.")
 
 
@@ -75,11 +82,12 @@ async def send_message(message: types.Message, state: FSMContext):
     Main handle to ChatGPT conversations.
     """
     async with state.proxy() as d:
-        answer_message = await message.answer('Твой запрос отправлен, напрягаю извилины..')
+        answer_message = await message.answer('Обдумываю твой вопрос..')
         if 'context' in d:
             d['context'].append({'role': 'user', 'content': message.text})
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
+        logger.info(d)
         openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
         if openai_answer.ok:
             d['context'].extend(extract_context(openai_answer.json()))
