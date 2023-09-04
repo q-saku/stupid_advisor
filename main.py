@@ -97,7 +97,7 @@ async def unknown_message(message: types.Message, state: FSMContext):
     await send_message(message, state)
 
 
-@dp.callback_query_handler()
+@dp.callback_query_handler(state='*')
 async def callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
     args = callback_query.data.split("_", 1)
     if 'set' in args[0]:
