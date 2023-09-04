@@ -67,20 +67,35 @@ async def gpt_dialog(message: types.Message):
 
 
 @dp.message_handler(commands=['set_model'], state='*')
-async def set_model(message: types.Message):
+async def set_model(message: types.Message, state: FSMContext):
     keyboard = types.inline_keyboard.InlineKeyboardMarkup(
         row_width=1,
     )
     for el in AVAILABLE_MODELS:
+        cur_model = get_current_model(state)
+        if cur_model == el:
+            button_text = el + '☑️'
+        else:
+            button_text = el
         keyboard.add(
-            types.inline_keyboard.InlineKeyboardButton(text=el, callback_data='set_' + el)
+            types.inline_keyboard.InlineKeyboardButton(text=button_text, callback_data='set_' + el)
         )
     await message.answer('Выбери модель для работы', reply_markup=keyboard)
 
 
+@dp.message_handler(commands=['/system_message'], state=DialogStates.started)
+async def set_system_message(message: types.Message, state: FSMContext):
+    async with state.proxy() as d:
+        if 'context' in d:
+            d['context'].append({'role': 'system', 'content': message.text})
+        else:
+            d['context'] = {'role': 'system', 'content': message.text}
+    await message.answer(md_to_html(f'Выставлено системное сообщение: `{message.text}`'), parse_mode=types.ParseMode.HTML)
+
+
 @dp.message_handler(commands=['clear'], state=DialogStates.started)
 async def gpt_dialog(message: types.Message, state: FSMContext):
-    await message.answer("Контекст беседы был сброшен. Для нового диалога жми /gpt")
+    await message.answer("Контекст беседы был сброшен. Для нового диалога жми /gpt или просто напиши свое сообщение")
     d = await state.get_data()
     await state.finish()
 
@@ -96,7 +111,6 @@ async def send_message(message: types.Message, state: FSMContext):
             d['context'].append({'role': 'user', 'content': message.text})
         else:
             d['context'] = [{'role': 'user', 'content': message.text}]
-        logger.info(d)
         openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
         if openai_answer.ok:
             d['context'].extend(extract_context(openai_answer.json()))
@@ -121,6 +135,12 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
         async with state.proxy() as d:
             d['model'] = args[1]
         await callback_query.answer(f'Выставлена модель {args[1]}')
+
+
+def get_current_model(state: FSMContext):
+    with state.proxy() as d:
+        model = d.get('model', AVAILABLE_MODELS[0])
+    return model
 
 
 def extract_context(response):
