@@ -99,7 +99,9 @@ async def unknown_message(message: types.Message, state: FSMContext):
 
 @dp.callback_query_handler(state='*')
 async def callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
+    logger.info(callback_query)
     args = callback_query.data.split("_", 1)
+    logger.info(args)
     if 'set' in args[0]:
         async with state.proxy() as d:
             d['model'] = args[1]
