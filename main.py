@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
 AVAILABLE_MODELS = ['gpt-3.5-turbo', 'gpt-4']
+GPT4_ALLOWED_IDS = [1277041256, 1082295207, 468387894, 613130210, 303259445]
 
 storage = MemoryStorage()
 bot = Bot(token=BOT_API_TOKEN)
@@ -83,17 +84,6 @@ async def set_model(message: types.Message, state: FSMContext):
     await message.answer('Выбери модель для работы', reply_markup=keyboard)
 
 
-@dp.message_handler(commands=['/system_message'], state='*')
-async def set_system_message(message: types.Message, state: FSMContext):
-    logger.info(message.text)
-    async with state.proxy() as d:
-        if 'context' in d:
-            d['context'].append({'role': 'system', 'content': message.text})
-        else:
-            d['context'] = {'role': 'system', 'content': message.text}
-    await message.answer(md_to_html(f'Выставлено системное сообщение: `{message.text}`'), parse_mode=types.ParseMode.HTML)
-
-
 @dp.message_handler(commands=['clear'], state=DialogStates.started)
 async def gpt_dialog(message: types.Message, state: FSMContext):
     await message.answer("Контекст беседы был сброшен. Для нового диалога жми /gpt или просто напиши свое сообщение")
@@ -107,12 +97,12 @@ async def send_message(message: types.Message, state: FSMContext):
     Main handle to ChatGPT conversations.
     """
     async with state.proxy() as d:
+        answer_message = await message.answer('Обдумываю твой вопрос..')
         if message.text.startswith('/system_message'):
             role = 'system'
-            message.text = message.text.split('/system_message')[1]
+            message.text = message.text.split('/system_message')[1].trim()
         else:
             role = 'user'
-        answer_message = await message.answer('Обдумываю твой вопрос..')
         if 'context' in d:
             d['context'].append({'role': role, 'content': message.text})
         else:
@@ -145,15 +135,18 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
             d['model'] = args[1]
         keyboard = callback_query.message.reply_markup.inline_keyboard
         logger.info(keyboard)
-        for key in keyboard:
-            if key[0]["callback_data"] == callback_query.data:
-                key[0]["text"] = f"{key[0].text} ☑️"
-            else:
-                key[0]["text"] = f"{key[0].text.split()[0]}️"
-        await callback_query.message.edit_reply_markup(
-            reply_markup=types.inline_keyboard.InlineKeyboardMarkup(inline_keyboard=keyboard)
-        )
-        await callback_query.answer(f'Выставлена модель {args[1]}')
+        if callback_query.from_user.id not in GPT4_ALLOWED_IDS and 'gpt-4' in args[1]:
+            await callback_query.answer(f'Тебе не разрешено использовать GPT-4 модели')
+        else:
+            for key in keyboard:
+                if key[0]["callback_data"] == callback_query.data:
+                    key[0]["text"] = f"{key[0].text} ☑️"
+                else:
+                    key[0]["text"] = f"{key[0].text.split()[0]}️"
+            await callback_query.message.edit_reply_markup(
+                reply_markup=types.inline_keyboard.InlineKeyboardMarkup(inline_keyboard=keyboard)
+            )
+            await callback_query.answer(f'Выставлена модель {args[1]}')
 
 
 async def get_current_model(state: FSMContext):
