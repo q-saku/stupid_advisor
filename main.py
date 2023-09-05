@@ -74,7 +74,7 @@ async def set_model(message: types.Message, state: FSMContext):
     for el in AVAILABLE_MODELS:
         cur_model = await get_current_model(state)
         if cur_model == el:
-            button_text = el + '☑️'
+            button_text = el + ' ☑️'
         else:
             button_text = el
         keyboard.add(
@@ -85,6 +85,7 @@ async def set_model(message: types.Message, state: FSMContext):
 
 @dp.message_handler(commands=['/system_message'], state=DialogStates.started)
 async def set_system_message(message: types.Message, state: FSMContext):
+    logger.info(message.text)
     async with state.proxy() as d:
         if 'context' in d:
             d['context'].append({'role': 'system', 'content': message.text})
@@ -134,6 +135,14 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
     if args[0] == 'set':
         async with state.proxy() as d:
             d['model'] = args[1]
+        keyboard = callback_query.message.reply_markup.inline_keyboard
+        logger.info(keyboard)
+        for key in keyboard:
+            if key[0]["callback_data"] == callback_query.data:
+                key[0]["text"] = f"{key[0].text} ☑️"
+        await callback_query.message.edit_reply_markup(
+            reply_markup=types.inline_keyboard.InlineKeyboardMarkup(inline_keyboard=keyboard)
+        )
         await callback_query.answer(f'Выставлена модель {args[1]}')
 
 
