@@ -112,7 +112,7 @@ async def send_message(message: types.Message, state: FSMContext):
             message.text = message.text.split('/system_message')[1]
         else:
             role = 'user'
-            answer_message = await message.answer('Обдумываю твой вопрос..')
+        answer_message = await message.answer('Обдумываю твой вопрос..')
         if 'context' in d:
             d['context'].append({'role': role, 'content': message.text})
         else:
