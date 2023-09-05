@@ -83,7 +83,7 @@ async def set_model(message: types.Message, state: FSMContext):
     await message.answer('Выбери модель для работы', reply_markup=keyboard)
 
 
-@dp.message_handler(commands=['/system_message'], state=DialogStates.started)
+@dp.message_handler(commands=['/system_message'], state='*')
 async def set_system_message(message: types.Message, state: FSMContext):
     logger.info(message.text)
     async with state.proxy() as d:
@@ -140,6 +140,8 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
         for key in keyboard:
             if key[0]["callback_data"] == callback_query.data:
                 key[0]["text"] = f"{key[0].text} ☑️"
+            else:
+                key[0]["text"] = f"{key[0].text.split()[0]}️"
         await callback_query.message.edit_reply_markup(
             reply_markup=types.inline_keyboard.InlineKeyboardMarkup(inline_keyboard=keyboard)
         )
