@@ -107,17 +107,25 @@ async def send_message(message: types.Message, state: FSMContext):
     Main handle to ChatGPT conversations.
     """
     async with state.proxy() as d:
-        answer_message = await message.answer('Обдумываю твой вопрос..')
+        if message.text.startswith('/system_message'):
+            role = 'system'
+            message.text = message.text.split('/system_message')[1]
+        else:
+            role = 'user'
+            answer_message = await message.answer('Обдумываю твой вопрос..')
         if 'context' in d:
-            d['context'].append({'role': 'user', 'content': message.text})
+            d['context'].append({'role': role, 'content': message.text})
         else:
-            d['context'] = [{'role': 'user', 'content': message.text}]
-        openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
-        if openai_answer.ok:
-            d['context'].extend(extract_context(openai_answer.json()))
-            answer = d['context'][-1].get('content')
+            d['context'] = [{'role': role, 'content': message.text}]
+        if role == 'user':
+            openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
+            if openai_answer.ok:
+                d['context'].extend(extract_context(openai_answer.json()))
+                answer = d['context'][-1].get('content')
+            else:
+                answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
         else:
-            answer = f'У меня не получилось достучаться к оракулу. Возможно эта информация тебе поможет: {openai_answer.text}'
+            answer = f'Выставлено системное сообщение: `{message.text}`'
         logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
     await answer_message.edit_text(md_to_html(answer), parse_mode=types.ParseMode.HTML)
 
