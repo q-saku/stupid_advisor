@@ -131,13 +131,13 @@ async def unknown_message(message: types.Message, state: FSMContext):
 async def callback_handler(callback_query: types.CallbackQuery, state: FSMContext):
     args = callback_query.data.split("_", 1)
     if args[0] == 'set':
-        async with state.proxy() as d:
-            d['model'] = args[1]
         keyboard = callback_query.message.reply_markup.inline_keyboard
         logger.info(keyboard)
         if callback_query.from_user.id not in GPT4_ALLOWED_IDS and 'gpt-4' in args[1]:
             await callback_query.answer(f'Тебе не разрешено использовать GPT-4 модели')
         else:
+            async with state.proxy() as d:
+                d['model'] = args[1]
             for key in keyboard:
                 if key[0]["callback_data"] == callback_query.data:
                     key[0]["text"] = f"{key[0].text} ☑️"
