@@ -42,7 +42,7 @@ class OpenAIConnector(object):
     @classmethod
     def image_generation(cls, prompt, size='1024x1024', count=1, model='dall-e-3'):
         url = 'https://api.openai.com/v1/images/generations'
-        request_data = {'model': model, 'prompt': prompt, 'n': count, 'size': size }
+        request_data = {'model': model, 'prompt': prompt, 'n': count, 'size': '1024x1024'}
         resp = requests.post(url, json=request_data, headers=cls.HEADERS)
         logger.info(f'IMAGE GENERATION REQUEST {url} with DATA {request_data}')
         if not resp.ok:
