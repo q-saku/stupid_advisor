@@ -12,8 +12,10 @@ from aiogram.dispatcher.filters.state import StatesGroup, State
 logger = logging.getLogger(__name__)
 
 BOT_API_TOKEN = os.getenv('BOT_API_TOKEN')
-AVAILABLE_MODELS = ['gpt-3.5-turbo', 'gpt-4']
-GPT4_ALLOWED_IDS = [35690816, 1277041256, 1082295207, 468387894, 613130210, 303259445]
+AVAILABLE_MODELS = ['gpt-4o-mini', 'gpt-4o', 'o1-mini', 'gpt-3.5-turbo', 'gpt-4', 'dall-e-3']
+GPT_ALL_ALLOWED_IDS = [35690816, 1277041256, 1082295207, 468387894, 613130210, 303259445]
+DALLE3_ALLOWED_IDS = [238644194, 35690816]
+O1_ALLOWED_IDS = [35690816]
 
 storage = MemoryStorage()
 bot = Bot(token=BOT_API_TOKEN)
@@ -28,11 +30,20 @@ class OpenAIConnector(object):
     }
 
     @classmethod
-    def chat_completion(cls, context, model='gpt-3.5-turbo'):
+    def chat_completion(cls, context, model='gpt-4o-mini'):
         url = 'https://api.openai.com/v1/chat/completions'
         request_data = {'model': model, 'messages': context}
         resp = requests.post(url, json=request_data, headers=cls.HEADERS)
         logger.info(f'REQUEST {url} with DATA {request_data}')
+        if not resp.ok:
+            logger.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
+        return resp
+
+    @classmethod
+    def image_generation(cls, prompt, size='1024x1024', count=1, model='dall-e-3'):
+        url = 'https://api.openai.com/v1/images/generations'
+        request_data = {'model': model, 'prompt': prompt, 'n': count, 'size': size }
+        logger.info(f'IMAGE GENERATION REQUEST {url} with DATA {request_data}')
         if not resp.ok:
             logger.error(f'Something went wrong: {resp.reason} More details: {resp.text}')
         return resp
@@ -108,7 +119,15 @@ async def send_message(message: types.Message, state: FSMContext):
         else:
             d['context'] = [{'role': role, 'content': message.text}]
         if role == 'user':
-            openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
+            if 'dall-e' in d.get('model', AVAILABLE_MODELS[0]):
+                openai_answer = OpenAIConnector.image_generation(message.text, d.get('model', AVAILABLE_MODELS[0]))
+                if openai_answer.ok:
+                    image_url = openai_answer.json()['data'][0]['url']
+                    answer = f'Вот, что я накалякал'
+                    await answer_message.edit_text(md_to_html(answer), photo=image_url, parse_mode=types.ParseMode.HTML)
+                    return
+            else:
+                openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
             if openai_answer.ok:
                 d['context'].extend(extract_context(openai_answer.json()))
                 answer = d['context'][-1].get('content')
@@ -133,8 +152,12 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
     if args[0] == 'set':
         keyboard = callback_query.message.reply_markup.inline_keyboard
         logger.info(keyboard)
-        if callback_query.from_user.id not in GPT4_ALLOWED_IDS and 'gpt-4' in args[1]:
+        if callback_query.from_user.id not in GPT_ALL_ALLOWED_IDS and 'gpt-4' in args[1]:
             await callback_query.answer(f'Тебе не разрешено использовать GPT-4 модели')
+        elif callback_query.from_user.id not in DALLE3_ALLOWED_IDS and 'dall-e' in args[1]:
+            await callback_query.answer(f'Тебе не разрешено использовать DALL-E модели')
+        elif callback_query.from_user.id not in O1_ALLOWED_IDS and 'o1-mini' in args[1]:
+            await callback_query.answer(f'Тебе не разрешено использовать Q1 модели')
         else:
             async with state.proxy() as d:
                 d['model'] = args[1]
