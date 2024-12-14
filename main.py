@@ -8,6 +8,7 @@ from aiogram import Bot, Dispatcher, executor, types, utils
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import StatesGroup, State
+from aiogram.types.input_media import InputMedia
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ class OpenAIConnector(object):
     @classmethod
     def image_generation(cls, prompt, size='1024x1024', count=1, model='dall-e-3'):
         url = 'https://api.openai.com/v1/images/generations'
-        request_data = {'model': model, 'prompt': prompt, 'n': count, 'size': '1024x1024'}
+        request_data = {'model': model, 'prompt': prompt, 'n': count, 'size': '1024x1024' }
         resp = requests.post(url, json=request_data, headers=cls.HEADERS)
         logger.info(f'IMAGE GENERATION REQUEST {url} with DATA {request_data}')
         if not resp.ok:
@@ -124,8 +125,8 @@ async def send_message(message: types.Message, state: FSMContext):
                 openai_answer = OpenAIConnector.image_generation(message.text, d.get('model', AVAILABLE_MODELS[0]))
                 if openai_answer.ok:
                     image_url = openai_answer.json()['data'][0]['url']
-                    answer = f'Вот, что я накалякал'
-                    await answer_message.edit_text(md_to_html(answer), photo=image_url, parse_mode=types.ParseMode.HTML)
+                    answer_photo = InputMedia(type='photo', media=image_url, caption=f'Вот, что я накалякал')
+                    await answer_message.edit_media(answer_photo)
                     return
             else:
                 openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))

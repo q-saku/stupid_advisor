@@ -1,4 +1,7 @@
-aiogram
+aiogram==2.25.1
+cython
+aiohttp
 requests
 asyncio
+Pyrebase4
 markdown
