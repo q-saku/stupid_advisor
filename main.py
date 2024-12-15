@@ -210,20 +210,21 @@ def md_to_html(text: str) -> str:
     while True:
         text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
         text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-        check_position(text, "```", "<pre>", "</pre>")
-        check_position(text, "`", "<code>", "</code>")
+        text = check_position(text, "```", "<pre>", "</pre>")
+        text = check_position(text, "`", "<code>", "</code>")
     return text
 
 
 def check_position(text, pattern, tag_open, tag_closed):
     if pattern not in text:
-        return
+        return text
     position = text.find(pattern)
     if position > len(text)/2:
         text = text + tag_closed
     else:
         text = tag_open + text
-    
+    return text
+
 
 def prepare_logging(filename):
     logging.config.dictConfig({
