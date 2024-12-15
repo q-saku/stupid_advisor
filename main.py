@@ -140,8 +140,9 @@ async def send_message(message: types.Message, state: FSMContext):
         answers = paging(answer)
         await answer_message.edit_text(md_to_html(answers[0]), parse_mode=types.ParseMode.HTML)
         if len(answers) > 1:
-            for answer in answers[1:]:
-                await message.answer(md_to_html(answer))
+            for a in answers[1:]:
+                print(a)
+                await message.answer(md_to_html(a), parse_mode=types.ParseMode.HTML)
 
 
 @dp.message_handler(state=None)
