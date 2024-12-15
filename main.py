@@ -138,7 +138,7 @@ async def send_message(message: types.Message, state: FSMContext):
             answer = f'Выставлено системное сообщение: `{message.text}`'
         logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
         answers = paging(answer)
-        print(answers)
+        logger.info(answers)
         await answer_message.edit_text(md_to_html(answers[0]), parse_mode=types.ParseMode.HTML)
         if len(answers) > 1:
             for a in answers[1:]:
@@ -208,11 +208,10 @@ def paging(message_text):
 def md_to_html(text: str) -> str:
     # Format the most popular tags from source <pre> and <code> if message was cutted - end with ```
     text = utils.markdown.quote_html(text)
-    while True:
-        text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
-        text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-        text = check_position(text, "```", "<pre>", "</pre>")
-        text = check_position(text, "`", "<code>", "</code>")
+    text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
+    text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
+    text = check_position(text, "```", "<pre>", "</pre>")
+    text = check_position(text, "`", "<code>", "</code>")
     return text
 
 
