@@ -111,6 +111,13 @@ async def send_message(message: types.Message, state: FSMContext):
     """
     async with state.proxy() as d:
         answer_message = await message.answer('Обдумываю твой вопрос..')
+        if 'dall-e' in d.get('model', AVAILABLE_MODELS[0]):
+            openai_answer = OpenAIConnector.image_generation(message.text, d.get('model', AVAILABLE_MODELS[0]))
+            if openai_answer.ok:
+                image_url = openai_answer.json()['data'][0]['url']
+                answer_photo = InputMedia(type='photo', media=image_url, caption=f'Вот, что у меня получилось')
+                await answer_message.edit_media(answer_photo)
+                return
         if message.text.startswith('/system_message'):
             role = 'system'
             message.text = message.text.split('/system_message')[1].trim()
@@ -121,15 +128,7 @@ async def send_message(message: types.Message, state: FSMContext):
         else:
             d['context'] = [{'role': role, 'content': message.text}]
         if role == 'user':
-            if 'dall-e' in d.get('model', AVAILABLE_MODELS[0]):
-                openai_answer = OpenAIConnector.image_generation(message.text, d.get('model', AVAILABLE_MODELS[0]))
-                if openai_answer.ok:
-                    image_url = openai_answer.json()['data'][0]['url']
-                    answer_photo = InputMedia(type='photo', media=image_url, caption=f'Вот, что я накалякал')
-                    await answer_message.edit_media(answer_photo)
-                    return
-            else:
-                openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
+            openai_answer = OpenAIConnector.chat_completion(d['context'], d.get('model', AVAILABLE_MODELS[0]))
             if openai_answer.ok:
                 d['context'].extend(extract_context(openai_answer.json()))
                 answer = d['context'][-1].get('content')
@@ -138,7 +137,11 @@ async def send_message(message: types.Message, state: FSMContext):
         else:
             answer = f'Выставлено системное сообщение: `{message.text}`'
         logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
-    await answer_message.edit_text(md_to_html(answer), parse_mode=types.ParseMode.HTML)
+        answers = paging(answer)
+        await answer_message.edit_text(md_to_html(answers[0]), parse_mode=types.ParseMode.HTML)
+        if len(answers) > 1:
+            for answer in answers[1:]:
+                await message.answer(md_to_html(answer))
 
 
 @dp.message_handler(state=None)
@@ -185,6 +188,16 @@ def extract_context(response):
     for choice in response['choices']:
         result.append(choice['message'])
     return result
+
+
+def paging(message_text):
+    messages = []
+    if len(message_text) > 4096:
+        for x in range(0, len(message_text), 4096):
+            messages.append(message_text[x:x+4096])
+    else:
+        messages.append(message_text)
+    return messages
 
 
 def md_to_html(text: str) -> str:
