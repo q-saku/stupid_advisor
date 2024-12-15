@@ -141,7 +141,6 @@ async def send_message(message: types.Message, state: FSMContext):
         await answer_message.edit_text(md_to_html(answers[0]), parse_mode=types.ParseMode.HTML)
         if len(answers) > 1:
             for a in answers[1:]:
-                print(a)
                 await message.answer(md_to_html(a), parse_mode=types.ParseMode.HTML)
 
 
@@ -169,7 +168,8 @@ async def callback_handler(callback_query: types.CallbackQuery, state: FSMContex
                 d['model'] = args[1]
             for key in keyboard:
                 if key[0]["callback_data"] == callback_query.data:
-                    key[0]["text"] = f"{key[0].text} ☑️"
+                    if "☑️" not in key[0]["text"]:
+                        key[0]["text"] = f"{key[0].text} ☑️"
                 else:
                     key[0]["text"] = f"{key[0].text.split()[0]}️"
             await callback_query.message.edit_reply_markup(
@@ -192,10 +192,13 @@ def extract_context(response):
 
 
 def paging(message_text):
+    """
+    Separate full message answer by 4050 symbols. This is less than 4096 characters because you didn't convert text to html yet.
+    """
     messages = []
-    if len(message_text) > 4096:
-        for x in range(0, len(message_text), 4096):
-            messages.append(message_text[x:x+4096])
+    if len(message_text) > 4050:
+        for x in range(0, len(message_text), 4050):
+            messages.append(message_text[x:x+4050])
     else:
         messages.append(message_text)
     return messages
@@ -207,11 +210,20 @@ def md_to_html(text: str) -> str:
     while True:
         text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
         text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-        if "```" not in text:
-            break
-        text = text + "```"
+        check_position(text, "```", "<pre>", "</pre>")
+        check_position(text, "`", "<code>", "</code>")
     return text
 
+
+def check_position(text, pattern, tag_open, tag_closed):
+    if pattern not in text:
+        return
+    position = text.find(pattern)
+    if position > len(text)/2:
+        text = text + tag_closed
+    else:
+        text = tag_open + text
+    
 
 def prepare_logging(filename):
     logging.config.dictConfig({
