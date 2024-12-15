@@ -138,6 +138,7 @@ async def send_message(message: types.Message, state: FSMContext):
             answer = f'Выставлено системное сообщение: `{message.text}`'
         logger.info(f'User_ID: {message.from_user} Request: {message.text} Response: {answer}')
         answers = paging(answer)
+        print(answers)
         await answer_message.edit_text(md_to_html(answers[0]), parse_mode=types.ParseMode.HTML)
         if len(answers) > 1:
             for a in answers[1:]:
