@@ -205,13 +205,15 @@ def paging(message_text):
 
 
 def md_to_html(text: str) -> str:
-    # Format the most popular tags from source <pre> and <code> if message was cutted - end with ```
+    # Format the most popular tags from source <pre> and <code> if message was cut - end with ```
     text = utils.markdown.quote_html(text)
     text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
     text = check_position(text, "```", "<pre>", "</pre>")
     text = re.sub(r"```([^`].+?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
+    text = re.sub(r"\*\*([^`].+?)\*\*", r"<strong>\1</strong>", text, flags=re.DOTALL)
+    logger.info(text)
     text = re.sub(r"`(.+?)`", r"<code>\1</code>", text)
-    text = check_position(text, "`", "<code>", "</code>")
+    #text = check_position(text, "`", "<code>", "</code>")
     logger.info(text)
     return text
 
@@ -221,8 +223,10 @@ def check_position(text, pattern, tag_open, tag_closed):
         return text
     position = text.find(pattern)
     if position > len(text)/2:
+        text = re.sub(r"```", rf"{tag_open}", text, flags=re.DOTALL)
         text = text + tag_closed
     else:
+        text = re.sub(r"```", rf"{tag_closed}", text, flags=re.DOTALL)
         text = tag_open + text
     return text
 
